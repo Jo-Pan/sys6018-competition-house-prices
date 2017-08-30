@@ -51,8 +51,78 @@ train[,fac_var]<-lapply(train[,fac_var],factor) #convert character variables to 
 colSums(is.na(train)) #no more na!
 
 # --------------- Parametric ----------------
+# Create the original regression model using all variables
 lm1 <- lm(SalePrice ~., data=train)
-summary(lm1) #Adjusted R-squared:  0.9192 
+summary(lm1) # Adjusted R-squared:  0.9192
+
+# Trying to find the best fit by running all possible combination of variables
+# compare the significance level of each variable and the value for adjusted R-squared
+library(MASS)
+fit <- lm(SalePrice ~., data=train)
+step <- stepAIC(fit, direction="both")
+step$anova
+
+# Determine the final regression model
+lm_final <- lm(SalePrice ~ MSSubClass + MSZoning + LotArea + Street + LandContour + 
+                 Utilities + LotConfig + LandSlope + Neighborhood + Condition1 + 
+                 Condition2 + BldgType + OverallQual + OverallCond + YearBuilt + 
+                 YearRemodAdd + RoofStyle + RoofMatl + Exterior1st + MasVnrType + 
+                 MasVnrArea + ExterQual + BsmtQual + BsmtCond + BsmtExposure + 
+                 BsmtFinSF1 + BsmtFinSF2 + BsmtUnfSF + X1stFlrSF + X2ndFlrSF + 
+                 BsmtFullBath + FullBath + BedroomAbvGr + KitchenAbvGr + KitchenQual + 
+                 TotRmsAbvGrd + Functional + Fireplaces + GarageCars + GarageArea + 
+                 GarageQual + GarageCond + WoodDeckSF + ScreenPorch + PoolArea + 
+                 PoolQC + Fence + MoSold + SaleCondition, data=train)
+summary(lm_final) # Adjusted R-squared:  0.9202
+
+# Process the test dataset using the same method as we processed training set
+#separate factor var & numeric var
+test_fac_var <- names(test)[which(sapply(test, is.factor))]      #factor variables' colnames (no need to convert to factor)
+test_numeric_var <- names(test)[which(sapply(test, is.numeric))] #numeric variables' colnames
+
+# any duplicate row? no.
+cat("The number of duplicated rows are", nrow(test) - nrow(unique(test)))
+
+
+#Identify na
+test_na_list<-colSums(is.na(test)) #count na in each col
+test_na_list[test_na_list!=0]            #print those cols with na
+names(test_na_list[test_na_list!=0])
+
+#fix numeric_var's na
+test_na_list[test_numeric_var]
+test$GarageYrBlt[is.na(test$GarageYrBlt)] <- 0
+test$MasVnrArea[is.na(test$MasVnrArea)] <- 0
+test$LotFrontage[is.na(test$LotFrontage)] <- 0
+
+#fix factor_var's na based on data_description 
+test[,test_fac_var]<-lapply(test[,test_fac_var],as.character) #convert factor variables to character
+
+
+test$Alley[is.na(test$Alley)]<-'na'  #No alley access
+test$BsmtQual[is.na(test$BsmtQual)]<-'na' #No Basement
+test$BsmtCond[is.na(test$BsmtCond)]<-'na' #No Basement
+test$BsmtExposure[is.na(test$BsmtExposure)]<-'na'#No Basement
+test$BsmtFinType1[is.na(test$BsmtFinType1)]<-'na'#No Basement
+test$BsmtFinType2[is.na(test$BsmtFinType2)]<-'na'#No Basement
+test$FireplaceQu[is.na(test$FireplaceQu)]<-'na'#No Fireplace
+test$GarageType[is.na(test$GarageType)]<-'na'#No Garage
+test$GarageQual[is.na(test$GarageQual)]<-'na'#No Garage
+test$GarageCond[is.na(test$GarageCond)]<-'na'#No Garage
+test$GarageFinish[is.na(test$GarageFinish)]<-'na'#No Garage
+test$PoolQC[is.na(test$PoolQC)]<-'na'#No Pool
+test$Fence[is.na(test$Fence)]<-'na'#No Fence
+test$MiscFeature[is.na(test$MiscFeature)]<-'na'#None
+test$MasVnrType[is.na(test$MasVnrType)]<-'None'  #there is a none category, so just make na to none
+test$Electrical[is.na(test$Electrical)]<-'na'  #there is only 1 na
+
+test[,test_fac_var]<-lapply(test[,test_fac_var],factor) #convert character variables to factors
+colSums(is.na(test)) #no more na!
+
+# Using the final model to predict
+preds <- as.vector(predict(lm_final, newdata=test))
+table <- data.frame(test$Id, preds)
+write.table(table, file="housepricesprediction.csv", row.names=F, col.names=c("Id", "SalePrice"), sep=",")
 
 # --------------- Non-Parametric ------------
 
