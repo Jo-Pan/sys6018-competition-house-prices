@@ -91,6 +91,12 @@ na_list[na_list!=0]           #we only have SalePrice left with na/
 
 comb[,fac_var]<-lapply(comb[,fac_var],factor) #convert character variables to factors  
 
+# --------------- Separate Train for Cross validation ----------
+mytrain=comb[comb$dataset=='train',c(1:80,82)]
+mytrain.index=c(sample(1:1460,730))
+mytrain.1<-mytrain[mytrain.index,]
+mytest.1<-mytrain[-mytrain.index,]
+
 # --------------- Parametric ----------------
 # Create the original regression model using all variables
 lm1 <- lm(SalePrice ~., data=comb[comb$dataset=='train',c(1:80,82)])
@@ -102,6 +108,17 @@ library(MASS)
 fit <- lm(SalePrice ~., data=comb[comb$dataset=='train',c(1:80,82)])
 step <- stepAIC(fit, direction="both")
 step$anova
+
+var_list<-('MSSubClass + MSZoning + LotArea + Street + LandContour + 
+             Utilities + LotConfig + LandSlope + Neighborhood + Condition1 + 
+             Condition2 + BldgType + OverallQual + OverallCond + YearBuilt + 
+             YearRemodAdd + RoofStyle + RoofMatl + Exterior1st + MasVnrType + 
+             MasVnrArea + ExterQual + BsmtQual + BsmtCond + BsmtExposure + 
+             BsmtFinSF1 + BsmtFinSF2 + BsmtUnfSF + X1stFlrSF + X2ndFlrSF + 
+             BsmtFullBath + FullBath + BedroomAbvGr + KitchenAbvGr + KitchenQual + 
+             TotRmsAbvGrd + Functional + Fireplaces + GarageCars + GarageArea + 
+             GarageQual + GarageCond + WoodDeckSF + ScreenPorch + PoolArea + 
+             PoolQC + Fence + MoSold + SaleCondition')
 
 # Determine the final regression model
 lm_final <- lm(SalePrice ~ MSSubClass + MSZoning + LotArea + Street + LandContour + 
@@ -115,6 +132,8 @@ lm_final <- lm(SalePrice ~ MSSubClass + MSZoning + LotArea + Street + LandContou
                  GarageQual + GarageCond + WoodDeckSF + ScreenPorch + PoolArea + 
                  PoolQC + Fence + MoSold + SaleCondition, data=comb[comb$dataset=='train',c(1:80,82)])
 summary(lm_final) # Adjusted R-squared:  0.9202
+
+
 
 # Using the final model to predict
 preds <- as.vector(predict(lm_final, newdata=comb[comb$dataset=='test',1:80]))
