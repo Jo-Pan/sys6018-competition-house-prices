@@ -6,59 +6,100 @@ library(dplyr)
 #Read data
 test<-read.csv("test.csv")
 train<-read.csv("train.csv")
-str(train)
+test$dataset<-'test'
+test$SalePrice<-NA
+train$dataset<-'train'
+comb<-rbind(test,train)
+
 #separate factor var & numeric var
-fac_var <- names(train)[which(sapply(train, is.factor))]      #factor variables' colnames (no need to convert to factor)
-numeric_var <- names(train)[which(sapply(train, is.numeric))] #numeric variables' colnames
+fac_var <- names(comb)[which(sapply(comb, is.factor))]      #factor variables' colnames (no need to convert to factor)
+numeric_var <- names(comb)[which(sapply(comb, is.numeric))] #numeric variables' colnames
 
 # any duplicate row? no.
-cat("The number of duplicated rows are", nrow(train) - nrow(unique(train)))
-
+cat("The number of duplicated rows are", nrow(comb) - nrow(unique(comb)))
 
 #Identify na
-na_list<-colSums(is.na(train)) #count na in each col
+na_list<-colSums(is.na(comb)) #count na in each col
 na_list[na_list!=0]            #print those cols with na
 names(na_list[na_list!=0])
 
-#fix numeric_var's na
-na_list[numeric_var]
-train$GarageYrBlt[is.na(train$GarageYrBlt)] <- 0
-train$MasVnrArea[is.na(train$MasVnrArea)] <- 0
-train$LotFrontage[is.na(train$LotFrontage)] <- 0
+#fix some numeric_var's na
+comb$GarageYrBlt[is.na(comb$GarageYrBlt)] <- 0
+comb$MasVnrArea[is.na(comb$MasVnrArea)] <- 0
+comb$LotFrontage[is.na(comb$LotFrontage)] <- 0
 
 #fix factor_var's na based on data_description 
-train[,fac_var]<-lapply(train[,fac_var],as.character) #convert factor variables to character
+comb[,fac_var]<-lapply(comb[,fac_var],as.character) #convert factor variables to character
                                                   
+comb$Alley[is.na(comb$Alley)]<-'na'  #No alley access
+comb$BsmtQual[is.na(comb$BsmtQual)]<-'na' #No Basement
+comb$BsmtCond[is.na(comb$BsmtCond)]<-'na' #No Basement
+comb$BsmtExposure[is.na(comb$BsmtExposure)]<-'na'#No Basement
+comb$BsmtFinType1[is.na(comb$BsmtFinType1)]<-'na'#No Basement
+comb$BsmtFinType2[is.na(comb$BsmtFinType2)]<-'na'#No Basement
+comb$FireplaceQu[is.na(comb$FireplaceQu)]<-'na'#No Fireplace
+comb$GarageType[is.na(comb$GarageType)]<-'na'#No Garage
+comb$GarageQual[is.na(comb$GarageQual)]<-'na'#No Garage
+comb$GarageCond[is.na(comb$GarageCond)]<-'na'#No Garage
+comb$GarageFinish[is.na(comb$GarageFinish)]<-'na'#No Garage
+comb$PoolQC[is.na(comb$PoolQC)]<-'na'#No Pool
+comb$Fence[is.na(comb$Fence)]<-'na'#No Fence
+comb$MiscFeature[is.na(comb$MiscFeature)]<-'na'#None
+comb$MasVnrType[is.na(comb$MasVnrType)]<-'None'  #there is a none category, so just make na to none
 
-train$Alley[is.na(train$Alley)]<-'na'  #No alley access
-train$BsmtQual[is.na(train$BsmtQual)]<-'na' #No Basement
-train$BsmtCond[is.na(train$BsmtCond)]<-'na' #No Basement
-train$BsmtExposure[is.na(train$BsmtExposure)]<-'na'#No Basement
-train$BsmtFinType1[is.na(train$BsmtFinType1)]<-'na'#No Basement
-train$BsmtFinType2[is.na(train$BsmtFinType2)]<-'na'#No Basement
-train$FireplaceQu[is.na(train$FireplaceQu)]<-'na'#No Fireplace
-train$GarageType[is.na(train$GarageType)]<-'na'#No Garage
-train$GarageQual[is.na(train$GarageQual)]<-'na'#No Garage
-train$GarageCond[is.na(train$GarageCond)]<-'na'#No Garage
-train$GarageFinish[is.na(train$GarageFinish)]<-'na'#No Garage
-train$PoolQC[is.na(train$PoolQC)]<-'na'#No Pool
-train$Fence[is.na(train$Fence)]<-'na'#No Fence
-train$MiscFeature[is.na(train$MiscFeature)]<-'na'#None
-train$MasVnrType[is.na(train$MasVnrType)]<-'None'  #there is a none category, so just make na to none
-train$Electrical[is.na(train$Electrical)]<-'na'  #there is only 1 na
 
-train[,fac_var]<-lapply(train[,fac_var],factor) #convert character variables to factors
-colSums(is.na(train)) #no more na!
+na_list<-colSums(is.na(comb)) 
+na_list[na_list!=0] #what remaining na we need to deal with:
+#MSZoning    Utilities  Exterior1st  Exterior2nd   BsmtFinSF1   BsmtFinSF2    BsmtUnfSF 
+#4            2            1            1            1            1            1 
+#TotalBsmtSF   Electrical BsmtFullBath BsmtHalfBath  KitchenQual   Functional   GarageCars 
+#1            1            2            2            1            2            1 
+#GarageArea     SaleType    SalePrice 
+#1            1         1459 
+
+comb[is.na(comb$BsmtFinSF1),] #id2121 has no basement, thus all below are 0
+comb$BsmtFinSF1[is.na(comb$BsmtFinSF1)]<-0
+comb$BsmtFinSF2[is.na(comb$BsmtFinSF2)]<-0
+comb$BsmtUnfSF[is.na(comb$BsmtUnfSF)]<-0
+comb$TotalBsmtSF[is.na(comb$TotalBsmtSF)]<-0
+comb$BsmtFullBath[is.na(comb$BsmtFullBath)]<-0
+comb$BsmtHalfBath[is.na(comb$BsmtHalfBath)]<-0
+
+comb[is.na(comb$GarageCars),] #id 2577 has no garage, thus all below are 0
+comb$GarageCars[is.na(comb$GarageCars)]<-0
+comb$GarageArea[is.na(comb$GarageArea)]<-0
+
+#all below with ? in comment may need to try other way of removing na
+comb$SaleType[is.na(comb$SaleType)]<-'Oth' #?since there is 'other', just group the 1 case as 'other'.
+
+comb$Functional[is.na(comb$Functional)]<-'Typ' #?there are 2 na. Just assume them as typical.
+comb$KitchenQual[is.na(comb$KitchenQual)]<-'TA'#?max count
+comb$MSZoning[is.na(comb$MSZoning)]<-'RL'#? replacing with the max count type
+comb$Utilities[is.na(comb$Utilities)]<-'AllPub' #?max count
+
+comb%>%group_by(Exterior2nd)%>%summarise(no_rows=length(Exterior2nd))
+comb$Exterior2nd[is.na(comb$Exterior2nd)]<-'VinylSd' #?max count
+
+comb%>%group_by(Exterior1st)%>%summarise(no_rows=length(Exterior1st))
+comb$Exterior1st[is.na(comb$Exterior1st)]<-'VinylSd' #?max count
+
+comb%>%group_by(Electrical)%>%summarise(no_rows=length(Electrical))
+comb$Electrical[is.na(comb$Electrical)]<-'SBrkr'  #?max count
+
+na_list<-colSums(is.na(comb)) 
+na_list[na_list!=0]           #we only have SalePrice left with na/
+
+comb[,fac_var]<-lapply(comb[,fac_var],factor) #convert character variables to factors  
 
 # --------------- Parametric ----------------
 # Create the original regression model using all variables
-lm1 <- lm(SalePrice ~., data=train)
-summary(lm1) # Adjusted R-squared:  0.9192
+lm1 <- lm(SalePrice ~., data=comb[comb$dataset=='train',c(1:80,82)])
+summary(lm1) # Adjusted R-squared:  0.9193 
 
 # Trying to find the best fit by running all possible combination of variables
 # compare the significance level of each variable and the value for adjusted R-squared
 library(MASS)
-fit <- lm(SalePrice ~., data=train)
+fit <- lm(SalePrice ~., data=comb[comb$dataset=='train',c(1:80,82)])
 step <- stepAIC(fit, direction="both")
 step$anova
 
@@ -72,56 +113,13 @@ lm_final <- lm(SalePrice ~ MSSubClass + MSZoning + LotArea + Street + LandContou
                  BsmtFullBath + FullBath + BedroomAbvGr + KitchenAbvGr + KitchenQual + 
                  TotRmsAbvGrd + Functional + Fireplaces + GarageCars + GarageArea + 
                  GarageQual + GarageCond + WoodDeckSF + ScreenPorch + PoolArea + 
-                 PoolQC + Fence + MoSold + SaleCondition, data=train)
+                 PoolQC + Fence + MoSold + SaleCondition, data=comb[comb$dataset=='train',c(1:80,82)])
 summary(lm_final) # Adjusted R-squared:  0.9202
 
-# Process the test dataset using the same method as we processed training set
-#separate factor var & numeric var
-test_fac_var <- names(test)[which(sapply(test, is.factor))]      #factor variables' colnames (no need to convert to factor)
-test_numeric_var <- names(test)[which(sapply(test, is.numeric))] #numeric variables' colnames
-
-# any duplicate row? no.
-cat("The number of duplicated rows are", nrow(test) - nrow(unique(test)))
-
-
-#Identify na
-test_na_list<-colSums(is.na(test)) #count na in each col
-test_na_list[test_na_list!=0]            #print those cols with na
-names(test_na_list[test_na_list!=0])
-
-#fix numeric_var's na
-test_na_list[test_numeric_var]
-test$GarageYrBlt[is.na(test$GarageYrBlt)] <- 0
-test$MasVnrArea[is.na(test$MasVnrArea)] <- 0
-test$LotFrontage[is.na(test$LotFrontage)] <- 0
-
-#fix factor_var's na based on data_description 
-test[,test_fac_var]<-lapply(test[,test_fac_var],as.character) #convert factor variables to character
-
-
-test$Alley[is.na(test$Alley)]<-'na'  #No alley access
-test$BsmtQual[is.na(test$BsmtQual)]<-'na' #No Basement
-test$BsmtCond[is.na(test$BsmtCond)]<-'na' #No Basement
-test$BsmtExposure[is.na(test$BsmtExposure)]<-'na'#No Basement
-test$BsmtFinType1[is.na(test$BsmtFinType1)]<-'na'#No Basement
-test$BsmtFinType2[is.na(test$BsmtFinType2)]<-'na'#No Basement
-test$FireplaceQu[is.na(test$FireplaceQu)]<-'na'#No Fireplace
-test$GarageType[is.na(test$GarageType)]<-'na'#No Garage
-test$GarageQual[is.na(test$GarageQual)]<-'na'#No Garage
-test$GarageCond[is.na(test$GarageCond)]<-'na'#No Garage
-test$GarageFinish[is.na(test$GarageFinish)]<-'na'#No Garage
-test$PoolQC[is.na(test$PoolQC)]<-'na'#No Pool
-test$Fence[is.na(test$Fence)]<-'na'#No Fence
-test$MiscFeature[is.na(test$MiscFeature)]<-'na'#None
-test$MasVnrType[is.na(test$MasVnrType)]<-'None'  #there is a none category, so just make na to none
-test$Electrical[is.na(test$Electrical)]<-'na'  #there is only 1 na
-
-test[,test_fac_var]<-lapply(test[,test_fac_var],factor) #convert character variables to factors
-colSums(is.na(test)) #no more na!
-
 # Using the final model to predict
-preds <- as.vector(predict(lm_final, newdata=test))
+preds <- as.vector(predict(lm_final, newdata=comb[comb$dataset=='test',1:80]))
 table <- data.frame(test$Id, preds)
+colSums(is.na(table))  #no weird predictions
 write.table(table, file="housepricesprediction.csv", row.names=F, col.names=c("Id", "SalePrice"), sep=",")
 
 # --------------- Non-Parametric ------------
