@@ -142,15 +142,15 @@ colSums(is.na(table))  #no weird predictions
 write.table(table, file="housepricesprediction.csv", row.names=F, col.names=c("Id", "SalePrice"), sep=",")
 
 # --------------- Non-Parametric (knn) ------------
-# We use KNN non-parametric method
 library(class)
 library(lubridate)
 str(comb)
 head(comb)
 summary(comb[,c(1,2,3,4)])
 normalize <-function(x) {
- return( (x-- min(x)) / (max(x)-min(x)) )
+  return( (x-- min(x)) / (max(x)-min(x)) )
 }
+
 # Pre-processsing - Normalize
 cl=c(2,4,5,18,19,20,21,27,35,37,38,39,c(44:53),55,57,60,62,63,c(67:72),c(76:78))
 comb_n <- as.data.frame(lapply(comb[,cl],normalize))
@@ -159,36 +159,37 @@ summary(comb_n)
 my_train <- comb[comb$dataset == 'train',][1:80,]
 my_test <- comb[comb$dataset == 'train',][82:162,]
 comb_train_target <- mytrain[,81]
-#comb_test_target <- my_test[,82]
+comb_test_target <- my_test[,82]
 require(class)
 sqrt(1460) # assume k approximates sqrt(1460)
 test = comb[comb$dataset=="test",][,-c(81,82)]
-pred <- knn(my_train,my_test,test,k=10)
 p_value=c()
 
 for (i in 1:100)
 {
- ml<-knn(train = my_train,my_test,cl=comb_train_target,k=i)
- a=as.numeric(as.character(ml))
- b=comb_train_target
- t=t.test(a,b)
- p_value <- c(p_value,t$p.value)
+  ml<-knn(train = mytrain.1[, numeric_var[1:(length(numeric_var)-1)]],mytest.1[, numeric_var[1:(length(numeric_var)-1)]],cl=mytrain.1$SalePrice,k=i)
+  a=as.numeric(as.character(ml))
+  b=comb_train_target
+  t=t.test(a,b)
+  p_value <- c(p_value,t$p.value)
 }
-max(p_value)
-which(p_value>=0.06157521)
-# k = 8
+plot(p_value,type='b')
+# when k = 10, p_value achieves maximum.
+
 # Cross-validate
-ml_test<-knn(train = my_train,my_test,cl=comb_train_target,k=8)
+ml_test<-knn(train = mytrain.1[, numeric_var[1:(length(numeric_var)-1)]],mytest.1[, numeric_var[1:(length(numeric_var)-1)]],cl=mytrain.1$SalePrice,k=10)
 a2=as.numeric(as.character(ml_test))
 b2=comb_test_target
 t2=t.test(a2,b2)
+t2
+# p-value = 0.8442, dont reject the null and state that the result for cross-validation is not significantly different from the test result. 
 
 # Predict
 ml_pred<-knn(train = comb[comb$dataset=='train', numeric_var[1:(length(numeric_var)-1)]],comb[comb$dataset=='test', numeric_var[1:(length(numeric_var)-1)]],cl=comb_train_target,k=8)
 table2 <- data.frame(test$Id, ml_pred)
 
-# Write files
 write.table(table2, file="housepricesprediction_ml.csv", row.names=F, col.names=c("Id", "SalePrice"), sep=",")
+
 
 # ==================================================
 #references:
