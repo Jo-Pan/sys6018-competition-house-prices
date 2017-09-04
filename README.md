@@ -5,6 +5,10 @@ Xinyang(Isabelle) Liu id:xl9qw      GithubId:isabellexliu   Role:parametric meth
 
 competition2.R: final code
 
-housepricesprediction_ml.csv: final predictions from knn     
+housepricesprediction_ml.csv: final predictions from knn     Kaggle Public Score:
 housepricesprediction_xgb.csv: final predictions from xgboost      
 housepricesprediction_lm.csv: final predictions from linear model      
+      
+knn(non-parametric)          Kaggle Public Score:0.25019              <br />
+xgboost                      Kaggle Public Score:0.19456              <br />
+linear model(non-parametric) Kaggle Public Score:0.17634              <br />
