@@ -111,19 +111,18 @@ lm1 <- lm(SalePrice ~., data=mytrain)
 summary(lm1) # Adjusted R-squared:  0.9363 
 
 # Test the model on the validation set
-test.lm1 <- lm(SalePrice ~.,data=mytest)
-summary(test.lm1) # Adjusted R-squared:  0.9323 
-mse1 <- mean(test.lm1$residuals^2)
-mse1 # 244,012,820
+probs1 <- as.vector(predict(lm1, newdata = mytest, type="response"))
+sse1 <- sum((probs1 - mytrain$SalePrice)^2)
+sse1 # 1.130189e+13
 
 # Trying to find the best fit by running all possible combination of variables
 # compare the significance level of each variable and the value for adjusted R-squared
-# this is very slow
+library(MASS)
 fit <- lm(SalePrice ~., data=mytrain)
 step <- stepAIC(fit, direction="both")
 step$anova
 
-# Determine another regression model based on stepwise fit
+# Determine a regression model based on stepwise fit
 lm2 <- lm(SalePrice ~ `MSZoning.C (all)` + MSZoning.FV + LotFrontage + 
             LotArea + Street.Grvl + LotShape.IR2 + LandContour.Low + 
             Utilities.AllPub + LotConfig.CulDSac + LandSlope.Gtl + LandSlope.Mod + 
@@ -157,48 +156,89 @@ lm2 <- lm(SalePrice ~ `MSZoning.C (all)` + MSZoning.FV + LotFrontage +
             ExterQual.TA, data=mytrain)
 summary(lm2) # Adjusted R-squared:  0.8827
 
-# --------------- Test the model on the validation set ---------------
-test.lm2 <- lm(SalePrice ~ `MSZoning.C (all)` + MSZoning.FV + LotFrontage + 
-                 LotArea + Street.Grvl + LotShape.IR2 + LandContour.Low + 
-                 Utilities.AllPub + LotConfig.CulDSac + LandSlope.Gtl + LandSlope.Mod + 
-                 Neighborhood.Blueste + Neighborhood.CollgCr + Neighborhood.Crawfor + 
-                 Neighborhood.Edwards + Neighborhood.Gilbert + Neighborhood.IDOTRR + 
-                 Neighborhood.Mitchel + Neighborhood.NAmes + Neighborhood.NoRidge + 
-                 Neighborhood.NridgHt + Neighborhood.NWAmes + Neighborhood.OldTown + 
-                 Neighborhood.StoneBr + Condition1.Artery + Condition1.Feedr + 
-                 Condition1.RRAe + Condition2.Feedr + Condition2.PosN + Condition2.RRAe + 
-                 BldgType.1Fam + BldgType.2fmCon + BldgType.Twnhs + HouseStyle.1.5Fin + 
-                 HouseStyle.2.5Fin + HouseStyle.2.5Unf + HouseStyle.2Story + 
-                 OverallQual + OverallCond + YearBuilt + YearRemodAdd + RoofStyle.Flat + 
-                 RoofStyle.Gable + RoofStyle.Gambrel + RoofStyle.Hip + RoofStyle.Mansard + 
-                 RoofMatl.Metal + Exterior1st.BrkComm + Exterior1st.BrkFace + 
-                 Exterior1st.CemntBd + Exterior1st.HdBoard + Exterior2nd.AsphShn + 
-                 Exterior2nd.CmentBd + Exterior2nd.Plywood + MasVnrType.BrkCmn + 
-                 MasVnrType.BrkFace + MasVnrArea + ExterQual.Ex + ExterCond.Gd + 
-                 Foundation.Slab + BsmtQual.Gd + BsmtQual.na + BsmtCond.Fa + 
-                 BsmtCond.Gd + BsmtCond.Po + BsmtExposure.Gd + BsmtFinType1.ALQ + 
-                 BsmtFinType1.BLQ + BsmtFinType1.LwQ + BsmtFinType1.Rec + 
-                 BsmtFinSF1 + BsmtFinType2.ALQ + BsmtFinType2.LwQ + BsmtFinSF2 + 
-                 BsmtUnfSF + HeatingQC.Po + Electrical.FuseP + X1stFlrSF + 
-                 X2ndFlrSF + BedroomAbvGr + KitchenQual.Ex + Functional.Maj1 + 
-                 Functional.Maj2 + Functional.Min1 + Functional.Mod + Fireplaces + 
-                 FireplaceQu.na + GarageType.Attchd + GarageType.Basment + 
-                 GarageType.BuiltIn + GarageType.CarPort + GarageType.Detchd + 
-                 GarageYrBlt + GarageFinish.RFn + GarageCars + GarageQual.Fa + 
-                 WoodDeckSF + OpenPorchSF + ScreenPorch + PoolArea + PoolQC.Ex + 
-                 Fence.GdPrv + MiscFeature.na + MoSold + SaleType.CWD + SaleCondition.Abnorml + 
-                 SaleCondition.Alloca + SaleCondition.Family + SaleCondition.Normal + 
-                 ExterQual.TA, data=mytest)
-summary(test.lm2) # Adjusted R-squared:  0.9306
-mse2 <- mean(test.lm2$residuals^2)
-mse2 # 313,409,832
+# Test the model on the validation set
+probs2 <- as.vector(predict(lm2, newdata = mytest, type="response"))
+sse2 <- sum((probs2-mytrain$SalePrice)^2)
+sse2 # 9.346518e+12
 
-# Using the better model (larger R-squared value and smaller mse) to predict
-lm1 <- lm(SalePrice ~., data=alltrain)
-predictions <- as.vector(predict(lm1, newdata=alltest))
+# Trying to find the best fit by running all possible combination of variables
+# compare the significance level of each variable and the value for adjusted R-squared
+fitall <- lm(SalePrice ~., data=alltrain)
+stepall <- stepAIC(fitall, direction="both")
+stepall$anova
+
+# Determine another regression model based on stepwise fit
+lm3 <- lm(SalePrice ~ MSSubClass + `MSZoning.C (all)` + MSZoning.FV + MSZoning.RL + 
+            LotArea + Street.Grvl + LandContour.Bnk + LandContour.Low + 
+            Utilities.AllPub + LotConfig.CulDSac + LotConfig.FR2 + LandSlope.Gtl + 
+            LandSlope.Mod + Neighborhood.Crawfor + Neighborhood.Edwards + 
+            Neighborhood.Mitchel + Neighborhood.NAmes + Neighborhood.NoRidge + 
+            Neighborhood.NridgHt + Neighborhood.NWAmes + Neighborhood.OldTown + 
+            Neighborhood.StoneBr + Condition1.Artery + Condition1.Feedr + 
+            Condition1.RRAe + Condition2.PosA + Condition2.PosN + Condition2.RRAe + 
+            BldgType.2fmCon + HouseStyle.2.5Fin + HouseStyle.2Story + 
+            OverallQual + OverallCond + YearBuilt + YearRemodAdd + RoofStyle.Flat + 
+            RoofStyle.Gable + RoofStyle.Gambrel + RoofStyle.Hip + RoofStyle.Mansard + 
+            RoofMatl.ClyTile + RoofMatl.CompShg + RoofMatl.Roll + `RoofMatl.Tar&Grv` + 
+            RoofMatl.WdShake + Exterior1st.BrkFace + Exterior1st.MetalSd + 
+            MasVnrType.BrkFace + MasVnrArea + ExterQual.Ex + ExterQual.Fa + 
+            ExterCond.Gd + Foundation.BrkTil + Foundation.CBlock + Foundation.PConc + 
+            Foundation.Slab + Foundation.Stone + BsmtQual.Ex + BsmtQual.na + 
+            BsmtCond.Po + BsmtExposure.Av + BsmtExposure.Gd + BsmtFinType1.GLQ + 
+            BsmtFinSF1 + BsmtFinType2.BLQ + BsmtFinType2.LwQ + BsmtFinSF2 + 
+            BsmtUnfSF + Heating.OthW + HeatingQC.Ex + Electrical.Mix + 
+            X1stFlrSF + X2ndFlrSF + BedroomAbvGr + KitchenAbvGr + KitchenQual.Ex + 
+            TotRmsAbvGrd + Functional.Maj1 + Functional.Maj2 + Functional.Min1 + 
+            Functional.Min2 + Functional.Mod + Functional.Sev + Fireplaces + 
+            FireplaceQu.na + GarageYrBlt + GarageCars + GarageArea + 
+            GarageQual.Ex + GarageCond.Ex + WoodDeckSF + ScreenPorch + 
+            PoolArea + PoolQC.Ex + PoolQC.Fa + PoolQC.Gd + Fence.GdPrv + 
+            SaleType.Con + SaleType.ConLD + SaleType.CWD + SaleType.New + 
+            SaleCondition.Normal + LotShape.IR1 + HouseStyle.1.5Unf + 
+            GarageType.2Types + Neighborhood.BrkSide + MasVnrType.BrkCmn, data = mytrain)
+summary(lm3) # Adjusted R-squared:  0.9373
+
+# Test the model on the validation set
+probs3 <- as.vector(predict(lm3, newdata = mytest, type="response"))
+sse3 <- sum((probs3-mytrain$SalePrice)^2)
+sse3 # 9.632561e+12
+
+# Using the better model with smaller sse to predict
+lm2 <- lm(SalePrice ~ `MSZoning.C (all)` + MSZoning.FV + LotFrontage + 
+            LotArea + Street.Grvl + LotShape.IR2 + LandContour.Low + 
+            Utilities.AllPub + LotConfig.CulDSac + LandSlope.Gtl + LandSlope.Mod + 
+            Neighborhood.Blueste + Neighborhood.CollgCr + Neighborhood.Crawfor + 
+            Neighborhood.Edwards + Neighborhood.Gilbert + Neighborhood.IDOTRR + 
+            Neighborhood.Mitchel + Neighborhood.NAmes + Neighborhood.NoRidge + 
+            Neighborhood.NridgHt + Neighborhood.NWAmes + Neighborhood.OldTown + 
+            Neighborhood.StoneBr + Condition1.Artery + Condition1.Feedr + 
+            Condition1.RRAe + Condition2.Feedr + Condition2.PosN + Condition2.RRAe + 
+            BldgType.1Fam + BldgType.2fmCon + BldgType.Twnhs + HouseStyle.1.5Fin + 
+            HouseStyle.2.5Fin + HouseStyle.2.5Unf + HouseStyle.2Story + 
+            OverallQual + OverallCond + YearBuilt + YearRemodAdd + RoofStyle.Flat + 
+            RoofStyle.Gable + RoofStyle.Gambrel + RoofStyle.Hip + RoofStyle.Mansard + 
+            RoofMatl.Metal + Exterior1st.BrkComm + Exterior1st.BrkFace + 
+            Exterior1st.CemntBd + Exterior1st.HdBoard + Exterior2nd.AsphShn + 
+            Exterior2nd.CmentBd + Exterior2nd.Plywood + MasVnrType.BrkCmn + 
+            MasVnrType.BrkFace + MasVnrArea + ExterQual.Ex + ExterCond.Gd + 
+            Foundation.Slab + BsmtQual.Gd + BsmtQual.na + BsmtCond.Fa + 
+            BsmtCond.Gd + BsmtCond.Po + BsmtExposure.Gd + BsmtFinType1.ALQ + 
+            BsmtFinType1.BLQ + BsmtFinType1.LwQ + BsmtFinType1.Rec + 
+            BsmtFinSF1 + BsmtFinType2.ALQ + BsmtFinType2.LwQ + BsmtFinSF2 + 
+            BsmtUnfSF + HeatingQC.Po + Electrical.FuseP + X1stFlrSF + 
+            X2ndFlrSF + BedroomAbvGr + KitchenQual.Ex + Functional.Maj1 + 
+            Functional.Maj2 + Functional.Min1 + Functional.Mod + Fireplaces + 
+            FireplaceQu.na + GarageType.Attchd + GarageType.Basment + 
+            GarageType.BuiltIn + GarageType.CarPort + GarageType.Detchd + 
+            GarageYrBlt + GarageFinish.RFn + GarageCars + GarageQual.Fa + 
+            WoodDeckSF + OpenPorchSF + ScreenPorch + PoolArea + PoolQC.Ex + 
+            Fence.GdPrv + MiscFeature.na + MoSold + SaleType.CWD + SaleCondition.Abnorml + 
+            SaleCondition.Alloca + SaleCondition.Family + SaleCondition.Normal + 
+            ExterQual.TA, data=alltrain)
+predictions <- as.vector(predict(lm2, newdata=alltest))
 table <- data.frame(test$Id, predictions)
 colSums(is.na(table))  #no weird predictions
-write.table(table, file="housepricesprediction.csv", row.names=F, col.names=c("Id", "SalePrice"), sep=",")
+write.table(table, file="housepricesprediction_lm.csv", row.names=F, col.names=c("Id", "SalePrice"), sep=",")
 
 # ================= Non-Parametric (KNN) =================
 normalize <-function(x) {
