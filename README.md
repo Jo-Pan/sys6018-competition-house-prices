@@ -11,4 +11,4 @@ housepricesprediction_lm.csv: final predictions from linear model      <br />
       
 knn(non-parametric)          Kaggle Public Score:0.25019              <br />
 xgboost                      Kaggle Public Score:0.19456              <br />
-linear model(non-parametric) Kaggle Public Score:0.17634              <br />
+linear model(parametric)     Kaggle Public Score:0.17634              <br />
