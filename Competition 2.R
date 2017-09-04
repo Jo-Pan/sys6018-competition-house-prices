@@ -2,8 +2,12 @@ setwd("/Users/Pan/Google Drive/Data Science/SYS 6018/sys6018-competition-house-p
 library(readr)
 library(dplyr)
 library(dummies)
-
-# --------------- Data Cleaning ----------------
+library(class)
+library(lubridate)
+#install.packages('xgboost')
+library(xgboost)
+library(MASS)
+# ================= Data Cleaning =================
 #Read data
 test<-read.csv("test.csv")
 train<-read.csv("train.csv")
@@ -92,7 +96,7 @@ na_list[na_list!=0]           #we only have SalePrice left with na/
 
 comb[,fac_var]<-lapply(comb[,fac_var],factor) #convert character variables to factors  
 
-comb_dum <- dummy.data.frame(comb, sep = ".")
+comb_dum <- dummy.data.frame(comb, sep = ".") #make all factor variables dummy (0/1)
 
 # --------------- Separate Train for Cross validation ----------
 alltrain=comb_dum[comb_dum$dataset.train==1,c(1:303,306)]
@@ -101,7 +105,7 @@ mytrain.index=c(sample(1:1460,730))
 mytrain<-alltrain[mytrain.index,]
 mytest<-alltrain[-mytrain.index,]
 
-# --------------- Parametric ----------------
+# ================= Parametric (lm) =================
 # Create the original regression model using all variables
 lm1 <- lm(SalePrice ~., data=mytrain)
 summary(lm1) # Adjusted R-squared:  0.9363 
@@ -110,11 +114,11 @@ summary(lm1) # Adjusted R-squared:  0.9363
 test.lm1 <- lm(SalePrice ~.,data=mytest)
 summary(test.lm1) # Adjusted R-squared:  0.9323 
 mse1 <- mean(test.lm1$residuals^2)
-mse1 # 244012820
+mse1 # 244,012,820
 
 # Trying to find the best fit by running all possible combination of variables
 # compare the significance level of each variable and the value for adjusted R-squared
-library(MASS)
+# this is very slow
 fit <- lm(SalePrice ~., data=mytrain)
 step <- stepAIC(fit, direction="both")
 step$anova
@@ -153,7 +157,7 @@ lm2 <- lm(SalePrice ~ `MSZoning.C (all)` + MSZoning.FV + LotFrontage +
             ExterQual.TA, data=mytrain)
 summary(lm2) # Adjusted R-squared:  0.8827
 
-# Test the model on the validation set
+# --------------- Test the model on the validation set ---------------
 test.lm2 <- lm(SalePrice ~ `MSZoning.C (all)` + MSZoning.FV + LotFrontage + 
                  LotArea + Street.Grvl + LotShape.IR2 + LandContour.Low + 
                  Utilities.AllPub + LotConfig.CulDSac + LandSlope.Gtl + LandSlope.Mod + 
@@ -187,7 +191,7 @@ test.lm2 <- lm(SalePrice ~ `MSZoning.C (all)` + MSZoning.FV + LotFrontage +
                  ExterQual.TA, data=mytest)
 summary(test.lm2) # Adjusted R-squared:  0.9306
 mse2 <- mean(test.lm2$residuals^2)
-mse2 # 313409832
+mse2 # 313,409,832
 
 # Using the better model (larger R-squared value and smaller mse) to predict
 lm1 <- lm(SalePrice ~., data=alltrain)
@@ -196,10 +200,111 @@ table <- data.frame(test$Id, predictions)
 colSums(is.na(table))  #no weird predictions
 write.table(table, file="housepricesprediction.csv", row.names=F, col.names=c("Id", "SalePrice"), sep=",")
 
-# --------------- Non-Parametric ------------
+# ================= Non-Parametric (KNN) =================
+normalize <-function(x) {
+  return( (x- min(x)) / (max(x)-min(x)) )
+}
+
+# --------------- Pre-processsing - Normalize ---------------
+cl=which(names(comb_dum) %in% numeric_var)  #find the column number for numeric_var
+cl=cl[2:length(cl)-1] #exclude id & salesprice
+comb_n<-comb_dum
+#normalize numeric_var columns and combine with non-numeric_var
+comb_n<-cbind(comb_dum[,-cl],as.data.frame(lapply(comb_n[,cl],normalize))) 
+
+#--------------- create testing set(my_train) & validation set(my_validation) ---------------
+#exclude column dataset.train, dataset.test and sales price
+my_train <- comb_n[comb_n$dataset.train == 1,][mytrain.index,c(2:266,271:306)]
+my_test <- comb_n[comb_n$dataset.train == 1,][-mytrain.index,c(2:266,271:306)]
+
+#find related salesprices for testing set and validation set.
+my_train_saleprice <- comb_n[comb_n$dataset.train == 1,][mytrain.index,269]
+my_test_saleprice <- comb_n[comb_n$dataset.train == 1,][-mytrain.index,269]
+
+require(class)
+#sqrt(1460) # assume k approximates sqrt(1460) =38
+
+# --------------- what is a good k? ---------------
+#store p-values for different k
+p_value=c()
+for (i in 1:100)
+{
+  ml<-knn(train = my_train,my_test,cl=my_train_saleprice,k=i)
+  t = qt(0.975,length(my_train-2))
+  a=as.numeric(as.character(ml))
+  b=my_train_saleprice
+  t=t.test(a,b)
+  p_value <- c(p_value,t$p.value)
+ }
+ plot(p_value,type='b')
+ which(p_value>0.05)
+ #1  2  5  7  8 11 14 17
+ # for mytest: when k = 15, p_value achieves maximum.
+ p_value[which(p_value==max(p_value))]
+ # p-value = 0.1757097942, dont reject the null and state that the result for cross-validation is not significantly different from the test result. 
+ 
+ 
+ #store sse
+sse_list<-c()
+for (i in 1:20) 
+{
+  ml<-knn(train = my_train,my_test,cl=my_train_saleprice,k=i)
+  a=as.numeric(as.character(ml))
+  b=my_test_saleprice
+  mysse=sum((a-b)^2)
+  sse_list <- c(sse_list,mysse)
+}
+plot(sse_list,type='b')
+# 5 is the second lowest .
+
+names(comb_n)
+# --------------- Predict ---------------
+ml_pred<-knn(train = comb_n[comb_n$dataset.train == 1,][,c(2:266,271:306)],comb_n[comb_n$dataset.test == 1,][,c(2:266,271:306)],cl=comb_n[comb_n$dataset.train == 1,][,269],k=5)
+table2 <- data.frame(test$Id, ml_pred)
+write.table(table2, file="housepricesprediction_ml.csv", row.names=F, col.names=c("Id", "SalePrice"), sep=",")
+
+#================= XGBOOST ========================
+
+train_x=alltrain[,1:length(alltrain)-1]
+test_x=alltest
+train_x[] <- lapply(train_x, as.numeric)
+test_x[]<-lapply(test_x, as.numeric)
+
+dtrain=xgb.DMatrix(as.matrix(train_x),label= alltrain$SalePrice)
+dtest=xgb.DMatrix(as.matrix(test_x))
+
+
+# --------------- xgboost parameters ---------------
+xgb_params = list(
+  seed = 0,
+  colsample_bytree = 0.5,
+  subsample = 0.8,
+  eta = 0.02, 
+  objective = 'reg:linear',
+  max_depth = 12,
+  alpha = 1,
+  gamma = 2,
+  min_child_weight = 1,
+  base_score = 7.76
+)
+
+xg_eval_mae <- function (yhat, dtrain) {
+  y = getinfo(dtrain, "label")
+  err= mae(exp(y),exp(yhat) )
+  return (list(metric = "error", value = err))
+}
+
+best_n_rounds=150 # try more rounds
+
+# --------------- train data  ---------------
+gb_dt=xgb.train(xgb_params,dtrain,nrounds = as.integer(best_n_rounds))
+xgb_preds=predict(gb_dt,dtest)
+table_xgb=data.frame(test$Id, xgb_preds)
+write.table(table_xgb, file="housepricesprediction_xgb.csv", row.names=F, col.names=c("Id", "SalePrice"), sep=",")
 
 
 # ==================================================
 #references:
 #https://stackoverflow.com/questions/8317231/elegant-way-to-report-missing-values-in-a-data-frame
 #https://www.kaggle.com/notaapple/detailed-exploratory-data-analysis-using-r/notebook
+#https://www.kaggle.com/shashankakki/xgboost-mice-implementation-in-r
